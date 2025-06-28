@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const steps = [
     {
@@ -153,19 +155,26 @@ const LandingPage = () => {
               <a href="#marketplace" className="text-stone-700 hover:text-emerald-600 font-medium transition-colors">
                 Marketplace
               </a>
-              <a href="#impact" className="text-stone-700 hover:text-emerald-600 font-medium transition-colors">
+              <a 
+               onClick={() => navigate('/impactcalculator')}
+              className="text-stone-700 hover:text-emerald-600 font-medium transition-colors">
                 Impact Calculator
               </a>
             </div>
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center space-x-3">
-              <button className="border border-emerald-500 text-emerald-600 hover:bg-emerald-50 px-4 py-2 rounded-md font-medium transition-colors">
+              <button 
+               onClick={() => navigate('/login')}
+              className="border border-emerald-500 text-emerald-600 hover:bg-emerald-50 px-4 py-2 rounded-md font-medium transition-colors">
                 Login
               </button>
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-md font-medium transition-colors">
-                Join Now
-              </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-md font-medium transition-colors"
+            >
+              Join Now
+            </button>
             </div>
 
             {/* Mobile menu button */}
@@ -195,10 +204,14 @@ const LandingPage = () => {
                   Impact Calculator
                 </a>
                 <div className="flex flex-col space-y-3 pt-4">
-                  <button className="w-full border border-emerald-500 text-emerald-600 px-4 py-2 rounded-md font-medium">
+                  <button 
+                   onClick={() => navigate('/login')}
+                  className="w-full border border-emerald-500 text-emerald-600 px-4 py-2 rounded-md font-medium">
                     Login
                   </button>
-                  <button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-md font-medium">
+                  <button 
+                   onClick={() => navigate('/signup')}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-md font-medium">
                     Join Now
                   </button>
                 </div>
@@ -255,10 +268,14 @@ const LandingPage = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+              <button 
+               onClick={() => navigate('/signup')}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
                 Join the Movement
               </button>
-              <button className="border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 px-8 py-6 text-lg font-semibold rounded-xl">
+              <button 
+               onClick={() => navigate('/login')}
+              className="border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 px-8 py-6 text-lg font-semibold rounded-xl">
                 Sign In
               </button>
             </div>
