@@ -23,7 +23,7 @@ const pool = new Pool({
 
 
 app.use(cors({
-  origin: 'https://hackathon-agri-loop-git-main-tejuskandipillis-projects.vercel.app/',
+  origin: 'https://hackathon-agri-loop.vercel.app',
   credentials: true, // if you're using cookies or authorization headers
 }));
 
