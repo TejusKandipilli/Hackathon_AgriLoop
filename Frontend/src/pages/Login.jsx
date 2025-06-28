@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
 export const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -15,9 +15,7 @@ export const Login = () => {
     try {
       const response = await fetch('https://hackathon-agriloop.onrender.com/api/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
@@ -34,13 +32,13 @@ export const Login = () => {
 
         navigate('/dashboard');
       } else {
-        toast.error(data.message || 'Invalid credentials. Please try again.', {
+        toast.error(data.message || 'Invalid email or password.', {
           position: 'top-center',
         });
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      toast.error('Network error. Please check your connection and try again.', {
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Network error. Please try again.', {
         position: 'top-center',
       });
     } finally {
@@ -49,16 +47,16 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-yellow-50 to-yellow-50 p-4">
-      {/* Decorative Background */}
-      <div className="absolute inset-0 opacity-30">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-yellow-50 to-yellow-50 p-4 relative">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-30 pointer-events-none">
         <div className="absolute top-20 left-10 w-20 h-20 bg-green-200 rounded-full opacity-20"></div>
         <div className="absolute top-60 right-20 w-32 h-32 bg-yellow-200 rounded-full opacity-15"></div>
         <div className="absolute bottom-40 left-20 w-16 h-16 bg-yellow-200 rounded-full opacity-25"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo Header */}
+        {/* Logo Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 group">
             <div className="p-3 bg-green-500 rounded-2xl group-hover:bg-green-600 transition-colors">
@@ -81,7 +79,7 @@ export const Login = () => {
           </div>
         </div>
 
-        {/* Card */}
+        {/* Login Card */}
         <div className="border-0 shadow-2xl bg-white/90 backdrop-blur-sm rounded-2xl">
           <div className="text-center pb-6 p-6">
             <h1 className="text-3xl font-bold text-yellow-800">Welcome Back</h1>
@@ -96,9 +94,9 @@ export const Login = () => {
                 <input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                   className="h-12 w-full border border-yellow-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 rounded-md px-3 py-2 outline-none transition-colors"
                   required
                 />
@@ -110,39 +108,37 @@ export const Login = () => {
                 <input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
                   className="h-12 w-full border border-yellow-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 rounded-md px-3 py-2 outline-none transition-colors"
                   required
                 />
               </div>
 
               <div className="flex items-center justify-between">
-                <a href="#forgot-password" className="text-sm text-green-600 hover:text-green-700 hover:underline">
-                  Forgot password?
-                </a>
+                <a href="#forgot-password" className="text-sm text-green-600 hover:text-green-700 hover:underline">Forgot password?</a>
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading}
+                className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
 
-            {/* Signup Redirect */}
+            {/* Redirect to Signup */}
             <div className="mt-6 text-center">
               <p className="text-yellow-600 text-sm sm:text-base">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <span
                   onClick={() => navigate('/signup')}
-                  role="link"
+                  role="button"
                   tabIndex={0}
-                  className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
+                  className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer"
                 >
                   Join AgriLoop
                 </span>
@@ -151,6 +147,7 @@ export const Login = () => {
           </div>
         </div>
 
+        {/* Terms Note */}
         <div className="text-center mt-6">
           <p className="text-sm text-yellow-500">
             By signing in, you agree to our Terms of Service and Privacy Policy
