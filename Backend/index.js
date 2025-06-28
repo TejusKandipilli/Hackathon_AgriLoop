@@ -36,14 +36,57 @@ const transporter = nodemailer.createTransport({
 
 // Signup with email verification
 app.post('/api/signup', async (req, res) => {
-  const { email, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+  const { 
+    username, 
+    full_name, 
+    email, 
+    gender, 
+    date_of_birth, 
+    city, 
+    role, 
+    password 
+  } = req.body;
+
+  // Validate required fields
+  if (!username || !full_name || !email || !role || !password) {
+    return res.status(400).json({ 
+      error: 'Missing required fields: username, full_name, email, role, and password are required' 
+    });
+  }
+
+  // Validate role
+  if (!['Seller', 'Buyer'].includes(role)) {
+    return res.status(400).json({ 
+      error: 'Role must be either "Seller" or "Buyer"' 
+    });
+  }
+
+  // Validate gender if provided
+  if (gender && !['Male', 'Female', 'Other'].includes(gender)) {
+    return res.status(400).json({ 
+      error: 'Gender must be "Male", "Female", or "Other"' 
+    });
+  }
 
   try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    // Insert user with all fields
     await pool.query(
-      'INSERT INTO users (email, password, verified) VALUES ($1, $2, $3)',
-      [email, hashedPassword, false]
+      `INSERT INTO users (username, full_name, email, gender, date_of_birth, city, role, password_hash, verified) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        username, 
+        full_name, 
+        email, 
+        gender || null, 
+        date_of_birth || null, 
+        city || null, 
+        role, 
+        hashedPassword, 
+        false
+      ]
     );
 
     const verificationLink = `http://localhost:${port}/api/verify-email?token=${token}`;
@@ -52,13 +95,47 @@ app.post('/api/signup', async (req, res) => {
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'Verify your email - AgriLoop',
-      html: `<p>Click <a href="${verificationLink}">here</a> to verify your email.</p>`
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Welcome to AgriLoop, ${full_name}!</h2>
+          <p>Thank you for signing up. Please verify your email address to complete your registration.</p>
+          <p>
+            <a href="${verificationLink}" 
+               style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Verify Email Address
+            </a>
+          </p>
+          <p>If the button doesn't work, you can also click this link:</p>
+          <p><a href="${verificationLink}">${verificationLink}</a></p>
+          <p>If you didn't create this account, please ignore this email.</p>
+        </div>
+      `
     });
 
-    res.status(200).send('Signup successful. Check your email to verify your account.');
+    res.status(200).json({ 
+      message: 'Signup successful. Check your email to verify your account.',
+      user: {
+        username,
+        full_name,
+        email,
+        role
+      }
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error during signup.');
+    console.error('Signup error:', err);
+    
+    // Handle specific database errors
+    if (err.code === '23505') { // PostgreSQL unique violation
+      if (err.constraint === 'users_email_key') {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
+      if (err.constraint === 'users_username_key') {
+        return res.status(409).json({ error: 'Username already exists' });
+      }
+    }
+    
+    res.status(500).json({ error: 'Error during signup. Please try again.' });
   }
 });
 

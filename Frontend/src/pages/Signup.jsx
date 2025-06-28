@@ -1,5 +1,65 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast, Toaster } from 'react-hot-toast';
+
+// Signup function for AgriLoop registration
+const signupUser = async (formData) => {
+  try {
+    const payload = {
+      username: formData.username,
+      fullName: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      gender: formData.gender,
+      dateOfBirth: formData.dateOfBirth,
+      city: formData.city,
+      role: formData.role
+    };
+
+    const response = await fetch('https://hackathon-agriloop.onrender.com/api/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // ✅ Show success toast if status is 200
+    toast.success(data.message || 'Account created successfully!');
+
+    return {
+      success: true,
+      data: data,
+      message: data.message || 'Account created successfully!'
+    };
+
+  } catch (error) {
+    console.error('Signup error:', error);
+
+    let errorMsg = error.message || 'An error occurred during signup. Please try again.';
+
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      errorMsg = 'Network error. Please check your internet connection and try again.';
+    }
+
+    // ❌ Show error toast
+    toast.error(errorMsg);
+
+    return {
+      success: false,
+      error: errorMsg
+    };
+  }
+};
+
 
 export const Register = () => {
   const navigate = useNavigate();
@@ -7,6 +67,8 @@ export const Register = () => {
     username: "",
     fullName: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     gender: "",
     dateOfBirth: "",
     city: "",
@@ -27,23 +89,86 @@ export const Register = () => {
     setIsLoading(true);
 
     // Basic validation
-    if (!formData.username || !formData.fullName || !formData.email || !formData.gender || 
-        !formData.dateOfBirth || !formData.city || !formData.role) {
+    if (!formData.username || !formData.fullName || !formData.email || !formData.password || 
+        !formData.confirmPassword || !formData.gender || !formData.dateOfBirth || 
+        !formData.city || !formData.role) {
       alert("Please fill in all required fields.");
       setIsLoading(false);
       return;
     }
 
-    // Simulate registration process
-    setTimeout(() => {
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userEmail", formData.email);
-      localStorage.setItem("userRole", formData.role);
-      localStorage.setItem("userName", formData.fullName);
-      alert("Welcome to AgriLoop! Your account has been created successfully.");
-      // navigate to dashboard
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      alert("Please enter a valid email address.");
       setIsLoading(false);
-    }, 1500);
+      return;
+    }
+
+    // Password validation
+    if (formData.password.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Confirm password validation
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Age validation (optional - assuming minimum age of 13)
+    const birthDate = new Date(formData.dateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (age < 13 || (age === 13 && monthDiff < 0)) {
+      alert("You must be at least 13 years old to register.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Call the signup API
+      const result = await signupUser(formData);
+      
+      if (result.success) {
+        // Store user data in localStorage (you might want to use tokens from API response)
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userEmail", formData.email);
+        localStorage.setItem("userRole", formData.role);
+        localStorage.setItem("userName", formData.fullName);
+        
+        // If API returns user data or token, you can store it
+        if (result.data.token) {
+          localStorage.setItem("authToken", result.data.token);
+        }
+        if (result.data.userId) {
+          localStorage.setItem("userId", result.data.userId);
+        }
+        
+        alert(result.message || "Welcome to AgriLoop! Your account has been created successfully.");
+        
+        // Navigate to appropriate dashboard based on role
+        if (formData.role === 'seller') {
+          navigate('/seller-dashboard');
+        } else {
+          navigate('/buyer-dashboard');
+        }
+        
+      } else {
+        alert(result.error || "Registration failed. Please try again.");
+      }
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -133,6 +258,36 @@ export const Register = () => {
                   className="h-12 w-full border border-yellow-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 rounded-md px-3 py-2 outline-none transition-colors"
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-yellow-700 font-medium block">Password</label>
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    className="h-12 w-full border border-yellow-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 rounded-md px-3 py-2 outline-none transition-colors"
+                    required
+                    minLength="6"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="confirmPassword" className="text-yellow-700 font-medium block">Confirm Password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    className="h-12 w-full border border-yellow-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 rounded-md px-3 py-2 outline-none transition-colors"
+                    required
+                    minLength="6"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -234,19 +389,19 @@ export const Register = () => {
                 {isLoading ? "Creating account..." : "Create Account"}
               </button>
             </form>
-    <div className="mt-6 text-center">
-      <p className="text-yellow-600 text-sm sm:text-base">
-        Already have an account?{" "}
-        <span
-          onClick={() => navigate('/login')}
-          role="link"
-          tabIndex={0}
-          className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
-        >
-          Sign In
-        </span>
-      </p>
-    </div>
+            <div className="mt-6 text-center">
+              <p className="text-yellow-600 text-sm sm:text-base">
+                Already have an account?{" "}
+                <span
+                  onClick={() => navigate('/login')}
+                  role="link"
+                  tabIndex={0}
+                  className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
+                >
+                  Sign In
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -256,7 +411,9 @@ export const Register = () => {
           </p>
         </div>
       </div>
+      <Toaster position="top-right" />
     </div>
+    
   );
 };
 
