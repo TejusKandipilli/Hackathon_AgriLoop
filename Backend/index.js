@@ -180,21 +180,45 @@ app.get('/api/verify-email', async (req, res) => {
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
+
   try {
+    // 1. Check if user exists
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (result.rows.length === 0) return res.status(400).send('User not found.');
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
 
     const user = result.rows[0];
-    if (!user.verified) return res.status(403).send('Email not verified.');
 
+    // 2. Check if email is verified
+    if (!user.verified) {
+      return res.status(403).json({ message: 'Email not verified. Please verify your email to log in.' });
+    }
+
+    // 3. Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).send('Incorrect password.');
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Incorrect password.' });
+    }
 
+    // 4. Generate token
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token });
+
+    // 5. Respond with token and user info (optional)
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error logging in.');
+    console.error('Login Error:', err);
+    res.status(500).json({ message: 'Server error during login.' });
   }
 });
 
