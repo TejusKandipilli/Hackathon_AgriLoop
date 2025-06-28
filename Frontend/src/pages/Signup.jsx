@@ -7,11 +7,11 @@ const signupUser = async (formData) => {
   try {
     const payload = {
       username: formData.username,
-      fullName: formData.fullName,
+      full_name: formData.fullName,
       email: formData.email,
       password: formData.password,
       gender: formData.gender,
-      dateOfBirth: formData.dateOfBirth,
+      date_of_birth: formData.dateOfBirth,
       city: formData.city,
       role: formData.role
     };

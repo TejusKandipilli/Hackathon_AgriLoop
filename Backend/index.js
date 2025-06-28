@@ -22,7 +22,11 @@ const pool = new Pool({
 });
 
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://hackathon-agri-loop.vercel.app',
+  credentials: true, // if you're using cookies or authorization headers
+}));
+
 app.use(bodyParser.json());
 
 // Email transporter
