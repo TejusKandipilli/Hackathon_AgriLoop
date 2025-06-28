@@ -150,7 +150,63 @@ app.get('/api/verify-email', async (req, res) => {
   const { token } = req.query;
 
   if (!token) {
-    return res.status(400).json({ success: false, message: 'Verification token is missing.' });
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+          }
+          .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+          }
+          .error-icon {
+            color: #ef4444;
+            font-size: 48px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            color: #1f2937;
+            margin-bottom: 16px;
+            font-size: 24px;
+          }
+          p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="error-icon">⚠️</div>
+          <h1>Verification Failed</h1>
+          <p>Verification token is missing. Please check your email for the correct verification link.</p>
+        </div>
+      </body>
+      </html>
+    `);
   }
 
   try {
@@ -162,17 +218,232 @@ app.get('/api/verify-email', async (req, res) => {
     const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [userEmail]);
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Email Verification</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 20px;
+            }
+            .container {
+              background: white;
+              padding: 40px;
+              border-radius: 12px;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+              text-align: center;
+              max-width: 400px;
+              width: 100%;
+            }
+            .error-icon {
+              color: #ef4444;
+              font-size: 48px;
+              margin-bottom: 20px;
+            }
+            h1 {
+              color: #1f2937;
+              margin-bottom: 16px;
+              font-size: 24px;
+            }
+            p {
+              color: #6b7280;
+              line-height: 1.6;
+              margin-bottom: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="error-icon">❌</div>
+            <h1>User Not Found</h1>
+            <p>The user associated with this verification token could not be found.</p>
+          </div>
+        </body>
+        </html>
+      `);
     }
 
     // Update verified status
     await pool.query('UPDATE users SET verified = true WHERE email = $1', [userEmail]);
 
-    return res.status(200).json({ success: true, message: 'Email verified successfully. You can now log in.' });
+    // Return success HTML page
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification Successful</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+          }
+          .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+          }
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .success-icon {
+            color: #10b981;
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: bounce 0.6s ease-in-out;
+          }
+          @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+              transform: translateY(0);
+            }
+            40% {
+              transform: translateY(-10px);
+            }
+            60% {
+              transform: translateY(-5px);
+            }
+          }
+          h1 {
+            color: #1f2937;
+            margin-bottom: 16px;
+            font-size: 24px;
+            font-weight: 600;
+          }
+          p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 30px;
+          }
+          .login-btn {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+          }
+          .login-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+          }
+          .login-btn:active {
+            transform: translateY(0);
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success-icon">✅</div>
+          <h1>Your mail has been successfully verified</h1>
+          <p>Great! Your email address has been verified. You can now access all features of your account.</p>
+          <a href="https://hackathon-agri-loop.vercel.app/login" class="login-btn">
+            Continue to Login
+          </a>
+        </div>
+      </body>
+      </html>
+    `);
 
   } catch (error) {
     console.error('Email verification error:', error);
-    return res.status(400).json({ success: false, message: 'Invalid or expired token.' });
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+          }
+          .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+          }
+          .error-icon {
+            color: #ef4444;
+            font-size: 48px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            color: #1f2937;
+            margin-bottom: 16px;
+            font-size: 24px;
+          }
+          p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="error-icon">⚠️</div>
+          <h1>Verification Failed</h1>
+          <p>Invalid or expired token. Please request a new verification email.</p>
+        </div>
+      </body>
+      </html>
+    `);
   }
 });
 
