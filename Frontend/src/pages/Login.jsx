@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 export const Login = () => {
   const [email, setEmail] = useState("");
@@ -13,7 +13,7 @@ export const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('https://hackathon-agriloop.onrender.com/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -21,39 +21,26 @@ export const Login = () => {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        
-        // Store the JWT token in localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userEmail', email);
-        
-        // Success toast
+
         toast.success("Welcome back! You've successfully logged in to AgriLoop.", {
-          duration: 4000,
           position: 'top-center',
         });
-        
-        // Navigate to dashboard or redirect to intended page
-        navigate('/dashboard'); // or wherever you want to redirect
-        
+
+        navigate('/dashboard');
       } else {
-        // Handle different error responses
-        const errorText = await response.text();
-        
-        // Error toast with specific backend message
-        toast.error(errorText, {
-          duration: 4000,
+        toast.error(data.message || 'Invalid credentials. Please try again.', {
           position: 'top-center',
         });
       }
     } catch (err) {
       console.error('Login error:', err);
-      
-      // Network error toast
       toast.error('Network error. Please check your connection and try again.', {
-        duration: 4000,
         position: 'top-center',
       });
     } finally {
@@ -63,19 +50,19 @@ export const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-yellow-50 to-yellow-50 p-4">
-      {/* Background Pattern */}
+      {/* Decorative Background */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute top-20 left-10 w-20 h-20 bg-green-200 rounded-full opacity-20"></div>
         <div className="absolute top-60 right-20 w-32 h-32 bg-yellow-200 rounded-full opacity-15"></div>
         <div className="absolute bottom-40 left-20 w-16 h-16 bg-yellow-200 rounded-full opacity-25"></div>
       </div>
-      
+
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
+        {/* Logo Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 group">
             <div className="p-3 bg-green-500 rounded-2xl group-hover:bg-green-600 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" className="h-8 w-8 text-white" viewBox="0 0 24 24">
                 <path d="m10 11 11 .9a1 1 0 0 1 .8 1.1l-.665 4.158a1 1 0 0 1-.988.842H20"></path>
                 <path d="M16 18h-5"></path>
                 <path d="M18 5a1 1 0 0 0-1 1v5.573"></path>
@@ -94,16 +81,16 @@ export const Login = () => {
           </div>
         </div>
 
+        {/* Card */}
         <div className="border-0 shadow-2xl bg-white/90 backdrop-blur-sm rounded-2xl">
-          {/* Header */}
           <div className="text-center pb-6 p-6">
             <h1 className="text-3xl font-bold text-yellow-800">Welcome Back</h1>
             <p className="text-yellow-600 text-base">Sign in to your AgriLoop account</p>
           </div>
-          
-          {/* Form */}
+
           <div className="p-6 pt-0">
             <form onSubmit={handleLogin} className="space-y-6">
+              {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="text-yellow-700 font-medium block">Email</label>
                 <input
@@ -116,7 +103,8 @@ export const Login = () => {
                   required
                 />
               </div>
-              
+
+              {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="password" className="text-yellow-700 font-medium block">Password</label>
                 <input
@@ -131,16 +119,14 @@ export const Login = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <a 
-                  href="#forgot-password" 
-                  className="text-sm text-green-600 hover:text-green-700 hover:underline"
-                >
+                <a href="#forgot-password" className="text-sm text-green-600 hover:text-green-700 hover:underline">
                   Forgot password?
                 </a>
               </div>
 
-              <button 
-                type="submit" 
+              {/* Submit Button */}
+              <button
+                type="submit"
                 className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading}
               >
@@ -148,9 +134,10 @@ export const Login = () => {
               </button>
             </form>
 
+            {/* Signup Redirect */}
             <div className="mt-6 text-center">
               <p className="text-yellow-600 text-sm sm:text-base">
-                Don't have an account?{" "}
+                Don't have an account?{' '}
                 <span
                   onClick={() => navigate('/signup')}
                   role="link"
@@ -170,6 +157,8 @@ export const Login = () => {
           </p>
         </div>
       </div>
+
+      <Toaster />
     </div>
   );
 };
