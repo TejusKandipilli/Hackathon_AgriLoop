@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast, Toaster } from 'react-hot-toast';
 
-// Signup function for AgriLoop registration
+// Improved signup function with better error handling
 const signupUser = async (formData) => {
   try {
-      const payload = {
-        username: formData.username,
-        full_name: formData.fullName,
-        email: formData.email,
-        password: formData.password,
-        gender: formData.gender,
-        date_of_birth: formData.dateOfBirth,
-        city: formData.city,
-        role: formData.role
-      };
+    const payload = {
+      username: formData.username,
+      full_name: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      gender: formData.gender,
+      date_of_birth: formData.dateOfBirth,
+      city: formData.city,
+      role: formData.role
+    };
 
     console.log('Signup payload:', payload);
+    
     const response = await fetch('https://hackathon-agriloop.onrender.com/api/signup', {
       method: 'POST',
       headers: {
@@ -26,15 +25,27 @@ const signupUser = async (formData) => {
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    // Get response text first to see what's actually returned
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', parseError);
+      throw new Error('Server returned invalid JSON response');
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      console.error('Server error response:', data);
+      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+    }
 
-    // ✅ Show success toast if status is 200
-    toast.success(data.message || 'Account created successfully!');
+    console.log('Success response:', data);
 
     return {
       success: true,
@@ -43,16 +54,19 @@ const signupUser = async (formData) => {
     };
 
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error('Signup error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
 
     let errorMsg = error.message || 'An error occurred during signup. Please try again.';
 
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       errorMsg = 'Network error. Please check your internet connection and try again.';
+    } else if (error.message.includes('CORS')) {
+      errorMsg = 'CORS error. Please contact support.';
     }
-
-    // ❌ Show error toast
-    toast.error(errorMsg);
 
     return {
       success: false,
@@ -61,9 +75,7 @@ const signupUser = async (formData) => {
   }
 };
 
-
-export const Register = () => {
-  const navigate = useNavigate();
+export default function Register() {
   const [formData, setFormData] = useState({
     username: "",
     fullName: "",
@@ -76,7 +88,9 @@ export const Register = () => {
     role: ""
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const indianCities = [
     "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad",
@@ -88,12 +102,28 @@ export const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setDebugInfo('Starting signup process...');
+    setError('');
+    setSuccess('');
 
     // Basic validation
     if (!formData.username || !formData.fullName || !formData.email || !formData.password || 
         !formData.confirmPassword || !formData.gender || !formData.dateOfBirth || 
         !formData.city || !formData.role) {
-      alert("Please fill in all required fields.");
+      const missingFields = [];
+      if (!formData.username) missingFields.push('username');
+      if (!formData.fullName) missingFields.push('fullName');
+      if (!formData.email) missingFields.push('email');
+      if (!formData.password) missingFields.push('password');
+      if (!formData.confirmPassword) missingFields.push('confirmPassword');
+      if (!formData.gender) missingFields.push('gender');
+      if (!formData.dateOfBirth) missingFields.push('dateOfBirth');
+      if (!formData.city) missingFields.push('city');
+      if (!formData.role) missingFields.push('role');
+      
+      const errorMsg = `Please fill in all required fields. Missing: ${missingFields.join(', ')}`;
+      setError(errorMsg);
+      setDebugInfo(errorMsg);
       setIsLoading(false);
       return;
     }
@@ -101,72 +131,77 @@ export const Register = () => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      alert("Please enter a valid email address.");
+      const errorMsg = "Invalid email format";
+      setError(errorMsg);
+      setDebugInfo(errorMsg);
       setIsLoading(false);
       return;
     }
 
     // Password validation
     if (formData.password.length < 6) {
-      alert("Password must be at least 6 characters long.");
+      const errorMsg = "Password must be at least 6 characters long";
+      setError(errorMsg);
+      setDebugInfo(errorMsg);
       setIsLoading(false);
       return;
     }
 
     // Confirm password validation
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match.");
+      const errorMsg = "Passwords don't match";
+      setError(errorMsg);
+      setDebugInfo(errorMsg);
       setIsLoading(false);
       return;
     }
 
-    // Age validation (optional - assuming minimum age of 13)
+    // Age validation
     const birthDate = new Date(formData.dateOfBirth);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
     if (age < 13 || (age === 13 && monthDiff < 0)) {
-      alert("You must be at least 13 years old to register.");
+      const errorMsg = "You must be at least 13 years old to register";
+      setError(errorMsg);
+      setDebugInfo(errorMsg);
       setIsLoading(false);
       return;
     }
 
+    setDebugInfo('Validation passed, calling API...');
+
     try {
-      // Call the signup API
       const result = await signupUser(formData);
       
       if (result.success) {
-        // Store user data in localStorage (you might want to use tokens from API response)
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userEmail", formData.email);
-        localStorage.setItem("userRole", formData.role);
-        localStorage.setItem("userName", formData.fullName);
+        setSuccess(result.message);
+        setDebugInfo('Signup successful! Check console for details.');
         
-        // If API returns user data or token, you can store it
-        if (result.data.token) {
-          localStorage.setItem("authToken", result.data.token);
-        }
-        if (result.data.userId) {
-          localStorage.setItem("userId", result.data.userId);
-        }
-        
-        alert(result.message || "Welcome to AgriLoop! Your account has been created successfully.");
-        
-        // Navigate to appropriate dashboard based on role
-        if (formData.role === 'seller') {
-          navigate('/seller-dashboard');
-        } else {
-          navigate('/buyer-dashboard');
-        }
+        // Reset form on success
+        setFormData({
+          username: "",
+          fullName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          gender: "",
+          dateOfBirth: "",
+          city: "",
+          role: ""
+        });
         
       } else {
-        alert(result.error || "Registration failed. Please try again.");
+        setError(result.error);
+        setDebugInfo(`Signup failed: ${result.error}`);
       }
       
     } catch (error) {
       console.error('Registration error:', error);
-      alert("An unexpected error occurred. Please try again.");
+      const errorMsg = `Unexpected error: ${error.message}`;
+      setError(errorMsg);
+      setDebugInfo(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -177,6 +212,9 @@ export const Register = () => {
       ...prev,
       [field]: value
     }));
+    // Clear errors when user starts typing
+    if (error) setError('');
+    if (success) setSuccess('');
   };
 
   return (
@@ -206,11 +244,32 @@ export const Register = () => {
               </svg>
             </div>
             <div className="text-left">
-              <span onClick={() => navigate('/')} className="text-2xl font-bold text-green-700 cursor-pointer">AgriLoop</span>
+              <span className="text-2xl font-bold text-green-700 cursor-pointer">AgriLoop</span>
               <p className="text-sm text-yellow-600 -mt-1">Organic Waste Marketplace</p>
             </div>
           </div>
         </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800"><strong>Success:</strong> {success}</p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800"><strong>Error:</strong> {error}</p>
+          </div>
+        )}
+
+        {/* Debug Info */}
+        {debugInfo && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800"><strong>Debug:</strong> {debugInfo}</p>
+          </div>
+        )}
 
         <div className="border-0 shadow-2xl bg-white/90 backdrop-blur-sm rounded-2xl">
           {/* Header */}
@@ -221,7 +280,7 @@ export const Register = () => {
           
           {/* Form */}
           <div className="p-6 pt-0">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label htmlFor="username" className="text-yellow-700 font-medium block">Username</label>
@@ -383,18 +442,20 @@ export const Register = () => {
               </div>
 
               <button 
-                type="submit" 
+                type="submit"
                 className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account..." : "Create Account"}
               </button>
-            </form>
-            <div className="mt-6 text-center">
+            </div>
+          </div>
+            
+          <div className="px-6 pb-6">
+            <div className="text-center">
               <p className="text-yellow-600 text-sm sm:text-base">
                 Already have an account?{" "}
                 <span
-                  onClick={() => navigate('/login')}
                   role="link"
                   tabIndex={0}
                   className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
@@ -412,10 +473,6 @@ export const Register = () => {
           </p>
         </div>
       </div>
-      <Toaster position="top-right" />
     </div>
-    
   );
-};
-
-export default Register;
+}
