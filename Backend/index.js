@@ -28,6 +28,7 @@ app.use(cors({
 }));
 
 app.use(bodyParser.json());
+app.use(express.json())
 
 // Email transporter
 const transporter = nodemailer.createTransport({
