@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, Calendar, MapPin, Users } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
-const SignupPage = () => {
+const Signup = () => {
   const [formData, setFormData] = useState({
     username: '',
     full_name: '',
@@ -12,9 +14,8 @@ const SignupPage = () => {
     city: '',
     role: ''
   });
-  
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,29 +27,37 @@ const SignupPage = () => {
 
   const handleSubmit = async () => {
     setLoading(true);
-    setMessage({ type: '', text: '' });
 
     // Basic validation
     if (!formData.username || !formData.full_name || !formData.email || !formData.password || 
         !formData.gender || !formData.date_of_birth || !formData.city || !formData.role) {
-      setMessage({ type: 'error', text: 'Please fill in all required fields.' });
+      toast.error('Please fill in all required fields.');
       setLoading(false);
       return;
     }
 
-    try {
-      const response = await fetch('https://hackathon-agriloop.onrender.com/api/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+    const submitPromise = fetch('https://hackathon-agriloop.onrender.com/api/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
 
+    toast.promise(
+      submitPromise,
+      {
+        loading: 'Creating your account...',
+        success: 'Account created successfully! 🎉',
+        error: 'Failed to create account. Please try again.',
+      }
+    );
+
+    try {
+      const response = await submitPromise;
       const result = await response.json();
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Account created successfully!' });
         setFormData({
           username: '',
           full_name: '',
@@ -60,10 +69,10 @@ const SignupPage = () => {
           role: ''
         });
       } else {
-        setMessage({ type: 'error', text: result.message || 'Signup failed. Please try again.' });
+        toast.error(result.message || 'Signup failed. Please try again.');
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Network error. Please check your connection.' });
+      toast.error('Network error. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -71,6 +80,30 @@ const SignupPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-green-600 rounded-full flex items-center justify-center">
@@ -83,15 +116,6 @@ const SignupPage = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">
-          {message.text && (
-            <div className={`mb-4 p-3 rounded-lg text-sm ${
-              message.type === 'success' 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
-                : 'bg-red-50 text-red-800 border border-red-200'
-            }`}>
-              {message.text}
-            </div>
-          )}
 
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
@@ -265,18 +289,19 @@ const SignupPage = () => {
             </button>
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <a href="#" className="font-medium text-green-600 hover:text-green-500">
-                Sign in
-              </a>
-            </p>
-          </div>
+        <div className="mt-6 text-center">
+        <p className="text-sm text-gray-600">
+          Already have an account?{' '}
+          <a onClick={() => navigate('/login')} className="font-medium text-green-600 hover:text-green-500 cursor-pointer">
+            Sign in
+          </a>
+        </p>
+        </div>
+
         </div>
       </div>
     </div>
   );
 };
 
-export default SignupPage;
+export default Signup;
