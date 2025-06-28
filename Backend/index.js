@@ -196,7 +196,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     // 3. Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ message: 'Incorrect password.' });
     }
