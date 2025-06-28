@@ -11,7 +11,7 @@ const { Pool } = pkg;
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 
 // PostgreSQL connection
 const pool = new Pool({
@@ -93,7 +93,8 @@ app.post('/api/signup', async (req, res) => {
       ]
     );
 
-    const verificationLink = `http://localhost:${port}/api/verify-email?token=${token}`;
+    const verificationLink = `https://hackathon-agri-loop.vercel.app/verify-email?token=${token}`;
+
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,

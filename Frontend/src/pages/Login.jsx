@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 export const Login = () => {
   const [email, setEmail] = useState("");
@@ -11,18 +12,53 @@ export const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login process
-    setTimeout(() => {
-      if (email && password) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userEmail", email);
-        alert("Welcome back! You've successfully logged in to AgriLoop.");
-        // navigate to dashboard
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Store the JWT token in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userEmail', email);
+        
+        // Success toast
+        toast.success("Welcome back! You've successfully logged in to AgriLoop.", {
+          duration: 4000,
+          position: 'top-center',
+        });
+        
+        // Navigate to dashboard or redirect to intended page
+        navigate('/dashboard'); // or wherever you want to redirect
+        
       } else {
-        alert("Please enter valid credentials.");
+        // Handle different error responses
+        const errorText = await response.text();
+        
+        // Error toast with specific backend message
+        toast.error(errorText, {
+          duration: 4000,
+          position: 'top-center',
+        });
       }
+    } catch (err) {
+      console.error('Login error:', err);
+      
+      // Network error toast
+      toast.error('Network error. Please check your connection and try again.', {
+        duration: 4000,
+        position: 'top-center',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -112,19 +148,19 @@ export const Login = () => {
               </button>
             </form>
 
-<div className="mt-6 text-center">
-      <p className="text-yellow-600 text-sm sm:text-base">
-        Don’t have an account?{" "}
-        <span
-          onClick={() => navigate('/signup')}
-          role="link"
-          tabIndex={0}
-          className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
-        >
-          Join AgriLoop
-        </span>
-      </p>
-    </div>
+            <div className="mt-6 text-center">
+              <p className="text-yellow-600 text-sm sm:text-base">
+                Don't have an account?{" "}
+                <span
+                  onClick={() => navigate('/signup')}
+                  role="link"
+                  tabIndex={0}
+                  className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
+                >
+                  Join AgriLoop
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
