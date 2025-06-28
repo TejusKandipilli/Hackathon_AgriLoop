@@ -10,6 +10,8 @@ import dotenv from 'dotenv';
 const { Pool } = pkg;
 dotenv.config();
 
+const EMISSION_FACTOR = 1.5; // kg CO₂ per kg waste
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -38,6 +40,24 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // Signup with email verification
 app.post('/api/signup', async (req, res) => {
@@ -517,154 +537,138 @@ app.get('/api/profile', async (req, res) => {
   }
 });
 
-app.post('/api/items',  async (req, res) => {
-  const { name, waste_type, weight_kg, price } = req.body;
-  const seller_id = req.user.id;
 
-  const result = await pool.query(`
-    INSERT INTO items (seller_id, name, waste_type, weight_kg, price)
-    VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [seller_id, name, waste_type, weight_kg, price]
-  );
 
-  res.status(201).json(result.rows[0]);
+// POST /api/items - Add new item
+app.post('/api/items', authenticateToken, async (req, res) => {
+  try {
+    const { name, waste_type, weight_kg, price } = req.body;
+    const seller_id = req.user.id; // Extract from JWT token
+
+    // Validation
+    if (!name || !waste_type || !weight_kg || !price) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    if (weight_kg <= 0 || price <= 0) {
+      return res.status(400).json({ error: 'Weight and price must be positive numbers' });
+    }
+
+    const EMISSION_FACTOR = 2.5; // kg CO2 per kg of waste
+    const emissions_prevented_kg = weight_kg * EMISSION_FACTOR;
+
+    const result = await db.query(
+      `INSERT INTO items (name, waste_type, weight_kg, price, emissions_prevented_kg, seller_id, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [name, waste_type, weight_kg, price, emissions_prevented_kg, seller_id]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error adding item:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/items',  async (req, res) => {
-  const seller_id = req.user.id;
+// GET /api/items - Get seller's items
+app.get('/api/items', authenticateToken, async (req, res) => {
+  try {
+    const seller_id = req.user.id; // Extract from JWT token
 
-  const items = await pool.query(`
-    SELECT * FROM items WHERE seller_id = $1 ORDER BY created_at DESC`,
-    [seller_id]
-  );
+    const result = await db.query(
+      `SELECT id, name, waste_type, weight_kg, price, emissions_prevented_kg, created_at
+       FROM items 
+       WHERE seller_id = $1 
+       ORDER BY created_at DESC`,
+      [seller_id]
+    );
 
-  res.json(items.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching items:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-const EMISSION_FACTOR = 1.5; // kg CO₂ saved per kg waste processed
+// DELETE /api/items/:id - Delete an item
+app.delete('/api/items/:id', authenticateToken, async (req, res) => {
+  try {
+    const itemId = req.params.id;
+    const seller_id = req.user.id;
 
-app.post('/api/orders',  async (req, res) => {
-  const { item_id, weight_kg } = req.body;
-  const buyer_id = req.user.id;
+    // Check if item belongs to the seller
+    const checkResult = await db.query(
+      'SELECT id FROM items WHERE id = $1 AND seller_id = $2',
+      [itemId, seller_id]
+    );
 
-  const itemRes = await pool.query(`SELECT * FROM items WHERE id = $1`, [item_id]);
-  if (itemRes.rowCount === 0) return res.status(404).json({ error: 'Item not found' });
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found or not authorized' });
+    }
 
-  const item = itemRes.rows[0];
-  const amount_paid = (item.price / item.weight_kg) * weight_kg;
-  const emissions_prevented_kg = weight_kg * EMISSION_FACTOR;
-
-  const result = await pool.query(`
-    INSERT INTO orders (
-      item_id, buyer_id, seller_id,
-      weight_kg, amount_paid, emissions_prevented_kg, status
-    ) VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
-    [item_id, buyer_id, item.seller_id, weight_kg, amount_paid, emissions_prevented_kg]
-  );
-
-  res.status(201).json(result.rows[0]);
+    await db.query('DELETE FROM items WHERE id = $1', [itemId]);
+    res.json({ message: 'Item deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting item:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.put('/api/orders/:id/complete',  async (req, res) => {
-  const { id } = req.params;
-  const seller_id = req.user.id;
+// GET /api/dashboard/seller - Get seller dashboard data
+app.get('/api/dashboard/seller', authenticateToken, async (req, res) => {
+  try {
+    const seller_id = req.user.id; // Extract from JWT token
 
-  const result = await pool.query(`
-    UPDATE orders SET status = 'completed', completed_at = NOW()
-    WHERE id = $1 AND seller_id = $2 RETURNING *`,
-    [id, seller_id]
-  );
+    // Get totals from transactions
+    const totals = await db.query(`
+      SELECT
+        COALESCE(SUM(t.amount_paid), 0) AS total_amount,
+        COALESCE(SUM(t.weight_kg), 0) AS total_weight,
+        COALESCE(SUM(t.emissions_prevented_kg), 0) AS total_emissions,
+        COUNT(CASE WHEN t.id IS NOT NULL THEN 1 END) AS total_transactions
+      FROM transactions t
+      WHERE t.seller_id = $1
+    `, [seller_id]);
 
-  if (result.rowCount === 0) return res.status(404).json({ error: "Order not found or not yours" });
+    // Get transaction history
+    const history = await db.query(`
+      SELECT 
+        t.id,
+        t.name, 
+        t.amount_paid, 
+        t.weight_kg, 
+        t.emissions_prevented_kg,
+        t.status, 
+        t.created_at,
+        u.username as buyer_name
+      FROM transactions t
+      LEFT JOIN users u ON t.buyer_id = u.id
+      WHERE t.seller_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT 20
+    `, [seller_id]);
 
-  res.json(result.rows[0]);
+    // Get current items count
+    const itemsCount = await db.query(
+      'SELECT COUNT(*) as count FROM items WHERE seller_id = $1',
+      [seller_id]
+    );
+
+    res.json({ 
+      totals: {
+        ...totals.rows[0],
+        total_items: parseInt(itemsCount.rows[0].count)
+      }, 
+      history: history.rows 
+    });
+  } catch (err) {
+    console.error('Error fetching dashboard:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/orders/seller',  async (req, res) => {
-  const seller_id = req.user.id;
 
-  const result = await pool.query(`
-    SELECT o.*, i.name, i.waste_type
-    FROM orders o JOIN items i ON o.item_id = i.id
-    WHERE o.seller_id = $1 ORDER BY created_at DESC`,
-    [seller_id]
-  );
-
-  res.json(result.rows);
-});
-
-app.get('/api/orders/buyer',  async (req, res) => {
-  const buyer_id = req.user.id;
-
-  const result = await pool.query(`
-    SELECT o.*, i.name, i.waste_type
-    FROM orders o JOIN items i ON o.item_id = i.id
-    WHERE o.buyer_id = $1 ORDER BY created_at DESC`,
-    [buyer_id]
-  );
-
-  res.json(result.rows);
-});
-
-app.get('/api/dashboard/seller',  async (req, res) => {
-  const seller_id = req.user.id;
-
-  const totals = await pool.query(`
-    SELECT
-      COALESCE(SUM(amount_paid), 0) AS total_amount,
-      COALESCE(SUM(weight_kg), 0) AS total_weight,
-      COALESCE(SUM(emissions_prevented_kg), 0) AS total_emissions,
-      COUNT(*) AS total_transactions
-    FROM orders WHERE seller_id = $1 AND status = 'completed'`,
-    [seller_id]
-  );
-
-  const history = await pool.query(`
-    SELECT o.*, i.name, i.waste_type
-    FROM orders o JOIN items i ON i.id = o.item_id
-    WHERE o.seller_id = $1 ORDER BY o.created_at DESC`,
-    [seller_id]
-  );
-
-  res.json({ totals: totals.rows[0], history: history.rows });
-});
-
-app.get('/api/dashboard/buyer',  async (req, res) => {
-  const buyer_id = req.user.id;
-
-  const totals = await pool.query(`
-    SELECT
-      COALESCE(SUM(amount_paid), 0) AS total_amount,
-      COALESCE(SUM(weight_kg), 0) AS total_weight,
-      COALESCE(SUM(emissions_prevented_kg), 0) AS total_emissions,
-      COUNT(*) AS total_transactions
-    FROM orders WHERE buyer_id = $1 AND status = 'completed'`,
-    [buyer_id]
-  );
-
-  const history = await pool.query(`
-    SELECT o.*, i.name, i.waste_type
-    FROM orders o JOIN items i ON i.id = o.item_id
-    WHERE o.buyer_id = $1 ORDER BY o.created_at DESC`,
-    [buyer_id]
-  );
-
-  res.json({ totals: totals.rows[0], history: history.rows });
-});
-
-app.delete('/api/orders/:id',  async (req, res) => {
-  const { id } = req.params;
-  const buyer_id = req.user.id;
-
-  const result = await pool.query(`
-    DELETE FROM orders WHERE id = $1 AND buyer_id = $2 AND status = 'pending' RETURNING *`,
-    [id, buyer_id]
-  );
-
-  if (result.rowCount === 0) return res.status(404).json({ error: 'Order not found or already completed' });
-
-  res.json({ message: 'Order cancelled successfully' });
-});
 
 app.post('/api/logout', (req, res) => {
   return res.status(200).json({ message: 'Logged out successfully' });
