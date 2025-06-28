@@ -30,7 +30,7 @@ export const Login = () => {
           position: 'top-center',
         });
 
-        navigate('/dashboard');
+        navigate('/profile');
       } else {
         toast.error(data.message || 'Invalid email or password.', {
           position: 'top-center',

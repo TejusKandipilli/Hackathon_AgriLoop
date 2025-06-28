@@ -227,7 +227,24 @@ app.get('/', (req, res) => {
   res.send('AgriLoop Backend is running');
 });
 
+app.get('/api/profile', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: 'Missing token' });
 
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { rows } = await pool.query('SELECT username, full_name, email, gender, date_of_birth, city, role FROM users WHERE id = $1', [decoded.userId]);
+
+    if (rows.length === 0) return res.status(404).json({ message: 'User not found' });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Token verification error:', err);
+    res.status(403).json({ message: 'Invalid token' });
+  }
+});
 
 // Start server
 app.listen(port, () => {
