@@ -149,12 +149,6 @@ const LandingPage = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#how-it-works" className="text-stone-700 hover:text-emerald-600 font-medium transition-colors">
-                How It Works
-              </a>
-              <a href="#marketplace" className="text-stone-700 hover:text-emerald-600 font-medium transition-colors">
-                Marketplace
-              </a>
               <a 
                onClick={() => navigate('/impactcalculator')}
               className="text-stone-700 hover:text-emerald-600 font-medium transition-colors">

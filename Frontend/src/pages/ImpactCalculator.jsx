@@ -107,7 +107,7 @@ const ImpactCalculator = () => {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
             <Leaf className="h-8 w-8 text-green-600 mr-2" />
-            <h1 className="text-4xl font-bold text-gray-800">AgriLoop</h1>
+            <h1 onClick={() => navigate('/')} className="text-4xl font-bold text-gray-800 cursor-pointer">AgriLoop</h1>
           </div>
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">Environmental Impact Calculator</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">

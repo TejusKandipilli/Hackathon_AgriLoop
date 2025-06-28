@@ -80,7 +80,7 @@ export const Register = () => {
               </svg>
             </div>
             <div className="text-left">
-              <span className="text-2xl font-bold text-green-700">AgriLoop</span>
+              <span onClick={() => navigate('/')} className="text-2xl font-bold text-green-700 cursor-pointer">AgriLoop</span>
               <p className="text-sm text-yellow-600 -mt-1">Organic Waste Marketplace</p>
             </div>
           </div>
