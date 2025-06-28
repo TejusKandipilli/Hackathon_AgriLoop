@@ -5,17 +5,18 @@ import { toast, Toaster } from 'react-hot-toast';
 // Signup function for AgriLoop registration
 const signupUser = async (formData) => {
   try {
-    const payload = {
-      username: formData.username,
-      full_name: formData.fullName,
-      email: formData.email,
-      password: formData.password,
-      gender: formData.gender,
-      date_of_birth: formData.dateOfBirth,
-      city: formData.city,
-      role: formData.role
-    };
+      const payload = {
+        username: formData.username,
+        full_name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        gender: formData.gender,
+        date_of_birth: formData.dateOfBirth,
+        city: formData.city,
+        role: formData.role
+      };
 
+    console.log('Signup payload:', payload);
     const response = await fetch('https://hackathon-agriloop.onrender.com/api/signup', {
       method: 'POST',
       headers: {
