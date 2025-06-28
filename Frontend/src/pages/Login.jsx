@@ -25,12 +25,18 @@ export const Login = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userEmail', email);
+        localStorage.setItem('userRole', data.user.role);
 
         toast.success("Welcome back! You've successfully logged in to AgriLoop.", {
           position: 'top-center',
         });
 
-        navigate('/profile');
+        // Navigate based on user role
+        if (data.user.role === 'Seller') {
+          navigate('/seller-dashboard');
+        } else {
+          navigate('/profile');
+        }
       } else {
         toast.error(data.message || 'Invalid email or password.', {
           position: 'top-center',
