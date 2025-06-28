@@ -147,15 +147,34 @@ app.post('/api/signup', async (req, res) => {
 // Verify email
 app.get('/api/verify-email', async (req, res) => {
   const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'Verification token is missing.' });
+  }
+
   try {
+    // Decode token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    await pool.query('UPDATE users SET verified = true WHERE email = $1', [decoded.email]);
-    res.send('Email verified successfully. You can now log in.');
-  } catch (err) {
-    console.error(err);
-    res.status(400).send('Invalid or expired token.');
+    const userEmail = decoded.email;
+
+    // Check if user exists
+    const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [userEmail]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Update verified status
+    await pool.query('UPDATE users SET verified = true WHERE email = $1', [userEmail]);
+
+    return res.status(200).json({ success: true, message: 'Email verified successfully. You can now log in.' });
+
+  } catch (error) {
+    console.error('Email verification error:', error);
+    return res.status(400).json({ success: false, message: 'Invalid or expired token.' });
   }
 });
+
 
 // Login endpoint
 app.post('/api/login', async (req, res) => {
