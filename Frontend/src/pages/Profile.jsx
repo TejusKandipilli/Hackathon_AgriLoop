@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, MapPin, Calendar, UserCheck } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
+
+
 const Profile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,6 +14,14 @@ const Profile = () => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
+
+const handleLogout = () => {
+  // Clear all stored data from localStorage
+  localStorage.clear();
+
+  // Redirect to login page
+  navigate('/login');
+};
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -23,7 +33,7 @@ const Profile = () => {
           return;
         }
 
-        const res = await fetch('https://hackathon-agriloop.onrender.com/api/profile', {
+        const res = await fetch('http://localhost:3000/api/profile', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -91,9 +101,26 @@ const Profile = () => {
           </div>
 
           <div className="px-6 pb-6">
-            <button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg">
-              Edit Profile
+            <button onClick={() => {
+      const role = localStorage.getItem('userRole');
+      if (role === 'Seller') {
+        navigate('/seller');
+      } else if (role === 'Buyer') {
+        navigate('/buyer');
+      } else {
+        toast.error('User role not found. Please login again.');
+        navigate('/login');
+      }
+    }} className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg">
+              Go to Dashboard
             </button>
+<button
+  onClick={handleLogout}
+  className="w-full my-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"
+>
+  Logout
+</button>
+
           </div>
         </div>
 

@@ -23,7 +23,7 @@ const pool = new Pool({
 
 
 app.use(cors({
-  origin: 'https://hackathon-agri-loop.vercel.app',
+  origin: 'http://localhost:5173',
   credentials: true, // if you're using cookies or authorization headers
 }));
 
@@ -94,7 +94,7 @@ app.post('/api/signup', async (req, res) => {
       ]
     );
 
-    const verificationLink = `https://hackathon-agriloop.onrender.com/api/verify-email?token=${token}`;
+    const verificationLink = `http://localhost:3000/api/verify-email?token=${token}`;
 
 
     await transporter.sendMail({
@@ -515,6 +515,159 @@ app.get('/api/profile', async (req, res) => {
     console.error('Token verification error:', err);
     res.status(403).json({ message: 'Invalid token' });
   }
+});
+
+app.post('/api/items',  async (req, res) => {
+  const { name, waste_type, weight_kg, price } = req.body;
+  const seller_id = req.user.id;
+
+  const result = await pool.query(`
+    INSERT INTO items (seller_id, name, waste_type, weight_kg, price)
+    VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [seller_id, name, waste_type, weight_kg, price]
+  );
+
+  res.status(201).json(result.rows[0]);
+});
+
+app.get('/api/items',  async (req, res) => {
+  const seller_id = req.user.id;
+
+  const items = await pool.query(`
+    SELECT * FROM items WHERE seller_id = $1 ORDER BY created_at DESC`,
+    [seller_id]
+  );
+
+  res.json(items.rows);
+});
+
+const EMISSION_FACTOR = 1.5; // kg CO₂ saved per kg waste processed
+
+app.post('/api/orders',  async (req, res) => {
+  const { item_id, weight_kg } = req.body;
+  const buyer_id = req.user.id;
+
+  const itemRes = await pool.query(`SELECT * FROM items WHERE id = $1`, [item_id]);
+  if (itemRes.rowCount === 0) return res.status(404).json({ error: 'Item not found' });
+
+  const item = itemRes.rows[0];
+  const amount_paid = (item.price / item.weight_kg) * weight_kg;
+  const emissions_prevented_kg = weight_kg * EMISSION_FACTOR;
+
+  const result = await pool.query(`
+    INSERT INTO orders (
+      item_id, buyer_id, seller_id,
+      weight_kg, amount_paid, emissions_prevented_kg, status
+    ) VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
+    [item_id, buyer_id, item.seller_id, weight_kg, amount_paid, emissions_prevented_kg]
+  );
+
+  res.status(201).json(result.rows[0]);
+});
+
+app.put('/api/orders/:id/complete',  async (req, res) => {
+  const { id } = req.params;
+  const seller_id = req.user.id;
+
+  const result = await pool.query(`
+    UPDATE orders SET status = 'completed', completed_at = NOW()
+    WHERE id = $1 AND seller_id = $2 RETURNING *`,
+    [id, seller_id]
+  );
+
+  if (result.rowCount === 0) return res.status(404).json({ error: "Order not found or not yours" });
+
+  res.json(result.rows[0]);
+});
+
+app.get('/api/orders/seller',  async (req, res) => {
+  const seller_id = req.user.id;
+
+  const result = await pool.query(`
+    SELECT o.*, i.name, i.waste_type
+    FROM orders o JOIN items i ON o.item_id = i.id
+    WHERE o.seller_id = $1 ORDER BY created_at DESC`,
+    [seller_id]
+  );
+
+  res.json(result.rows);
+});
+
+app.get('/api/orders/buyer',  async (req, res) => {
+  const buyer_id = req.user.id;
+
+  const result = await pool.query(`
+    SELECT o.*, i.name, i.waste_type
+    FROM orders o JOIN items i ON o.item_id = i.id
+    WHERE o.buyer_id = $1 ORDER BY created_at DESC`,
+    [buyer_id]
+  );
+
+  res.json(result.rows);
+});
+
+app.get('/api/dashboard/seller',  async (req, res) => {
+  const seller_id = req.user.id;
+
+  const totals = await pool.query(`
+    SELECT
+      COALESCE(SUM(amount_paid), 0) AS total_amount,
+      COALESCE(SUM(weight_kg), 0) AS total_weight,
+      COALESCE(SUM(emissions_prevented_kg), 0) AS total_emissions,
+      COUNT(*) AS total_transactions
+    FROM orders WHERE seller_id = $1 AND status = 'completed'`,
+    [seller_id]
+  );
+
+  const history = await pool.query(`
+    SELECT o.*, i.name, i.waste_type
+    FROM orders o JOIN items i ON i.id = o.item_id
+    WHERE o.seller_id = $1 ORDER BY o.created_at DESC`,
+    [seller_id]
+  );
+
+  res.json({ totals: totals.rows[0], history: history.rows });
+});
+
+app.get('/api/dashboard/buyer',  async (req, res) => {
+  const buyer_id = req.user.id;
+
+  const totals = await pool.query(`
+    SELECT
+      COALESCE(SUM(amount_paid), 0) AS total_amount,
+      COALESCE(SUM(weight_kg), 0) AS total_weight,
+      COALESCE(SUM(emissions_prevented_kg), 0) AS total_emissions,
+      COUNT(*) AS total_transactions
+    FROM orders WHERE buyer_id = $1 AND status = 'completed'`,
+    [buyer_id]
+  );
+
+  const history = await pool.query(`
+    SELECT o.*, i.name, i.waste_type
+    FROM orders o JOIN items i ON i.id = o.item_id
+    WHERE o.buyer_id = $1 ORDER BY o.created_at DESC`,
+    [buyer_id]
+  );
+
+  res.json({ totals: totals.rows[0], history: history.rows });
+});
+
+app.delete('/api/orders/:id',  async (req, res) => {
+  const { id } = req.params;
+  const buyer_id = req.user.id;
+
+  const result = await pool.query(`
+    DELETE FROM orders WHERE id = $1 AND buyer_id = $2 AND status = 'pending' RETURNING *`,
+    [id, buyer_id]
+  );
+
+  if (result.rowCount === 0) return res.status(404).json({ error: 'Order not found or already completed' });
+
+  res.json({ message: 'Order cancelled successfully' });
+});
+
+app.post('/api/logout', (req, res) => {
+  return res.status(200).json({ message: 'Logged out successfully' });
 });
 
 // Start server

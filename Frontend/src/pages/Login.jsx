@@ -8,43 +8,56 @@ export const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      const response = await fetch('https://hackathon-agriloop.onrender.com/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const response = await fetch('http://localhost:3000/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
-
-        toast.success("Welcome back! You've successfully logged in to AgriLoop.", {
-          position: 'top-center',
-        });
-
-        navigate('/profile');
-      } else {
-        toast.error(data.message || 'Invalid email or password.', {
-          position: 'top-center',
-        });
+    if (response.ok) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userEmail', email);
+      
+      // Store user role if provided by the API
+      if (data.user && data.user.role) {
+        localStorage.setItem('userRole', data.user.role);
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Network error. Please try again.', {
+
+      toast.success("Welcome back! You've successfully logged in to AgriLoop.", {
         position: 'top-center',
       });
-    } finally {
-      setIsLoading(false);
+
+      // Navigate based on user role
+      if (data.user && data.user.role === 'Seller') {
+        navigate('/seller');
+      } else if (data.user && data.user.role === 'Buyer') {
+        navigate('/buyer');
+      } else {
+        // Default fallback if role is not specified or unknown
+        navigate('/profile');
+      }
+    } else {
+      toast.error(data.message || 'Invalid email or password.', {
+        position: 'top-center',
+      });
     }
-  };
+  } catch (error) {
+    console.error('Login error:', error);
+    toast.error('Network error. Please try again.', {
+      position: 'top-center',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-yellow-50 to-yellow-50 p-4 relative">

@@ -36,7 +36,7 @@ const Signup = () => {
       return;
     }
 
-    const submitPromise = fetch('https://hackathon-agriloop.onrender.com/api/signup', {
+    const submitPromise = fetch('http://localhost:3000/api/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
