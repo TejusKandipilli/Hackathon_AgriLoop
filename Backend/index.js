@@ -93,7 +93,7 @@ app.post('/api/signup', async (req, res) => {
       ]
     );
 
-    const verificationLink = `https://hackathon-agri-loop.vercel.app/verify-email?token=${token}`;
+    const verificationLink = `https://hackathon-agriloop.onrender.com/verify-email?token=${token}`;
 
 
     await transporter.sendMail({
