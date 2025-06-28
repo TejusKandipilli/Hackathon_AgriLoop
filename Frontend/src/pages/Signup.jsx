@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export const Register = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     fullName: "",
@@ -232,18 +234,19 @@ export const Register = () => {
                 {isLoading ? "Creating account..." : "Create Account"}
               </button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-yellow-600">
-                Already have an account?{" "}
-                <a 
-                  href="#login" 
-                  className="text-green-600 hover:text-green-700 font-semibold hover:underline"
-                >
-                  Sign In
-                </a>
-              </p>
-            </div>
+    <div className="mt-6 text-center">
+      <p className="text-yellow-600 text-sm sm:text-base">
+        Already have an account?{" "}
+        <span
+          onClick={() => navigate('/login')}
+          role="link"
+          tabIndex={0}
+          className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
+        >
+          Sign In
+        </span>
+      </p>
+    </div>
           </div>
         </div>
 

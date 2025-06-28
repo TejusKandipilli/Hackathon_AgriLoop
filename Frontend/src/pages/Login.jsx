@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -110,17 +112,19 @@ export const Login = () => {
               </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-yellow-600">
-                Don't have an account?{" "}
-                <a 
-                  href="#register" 
-                  className="text-green-600 hover:text-green-700 font-semibold hover:underline"
-                >
-                  Join AgriLoop
-                </a>
-              </p>
-            </div>
+<div className="mt-6 text-center">
+      <p className="text-yellow-600 text-sm sm:text-base">
+        Don’t have an account?{" "}
+        <span
+          onClick={() => navigate('/signup')}
+          role="link"
+          tabIndex={0}
+          className="text-green-600 hover:text-green-700 font-semibold underline cursor-pointer transition-colors"
+        >
+          Join AgriLoop
+        </span>
+      </p>
+    </div>
           </div>
         </div>
 
